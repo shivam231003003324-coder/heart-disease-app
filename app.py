@@ -18,7 +18,7 @@ def load_model():
     """Load and train the model (runs only once)"""
     try:
         # Load data
-        data = pd.read_csv("data/heart.csv")
+        data = pd.read_csv("heart.csv")
         
         st.write(f"✅ Data loaded: {data.shape[0]} rows, {data.shape[1]} columns")
         st.write(f"📊 Column names: {list(data.columns)}")
@@ -160,5 +160,6 @@ if model is not None:
     st.markdown("**Disclaimer:** For educational purposes only. Consult a healthcare professional for proper medical advice.")
 else:
     st.error("❌ Model could not be loaded. Streamlit will retry when you save changes.")
+
 
 
