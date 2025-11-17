@@ -8,7 +8,12 @@ from sklearn.preprocessing import StandardScaler
 
 st.set_page_config(page_title="Heart Disease Predictor", page_icon="❤️", layout="wide")
 
-st.title("❤️ Heart Disease Prediction App")
+# --- SIDEBAR with Project Info ---
+with st.sidebar:
+    st.markdown("## ❤️ Heart Disease Prediction")
+    st.write("by Shivam Pandey")
+
+st.title("Heart Disease Prediction App")
 st.markdown("Enter your health information and click 'Predict' to get results.")
 
 @st.cache_resource
@@ -20,17 +25,11 @@ def load_model():
         
         # --- Ensure target is binary ---
         data['target'] = (data['target'] > 0).astype(int)
-
-        # Convert all columns to numeric
         for col in data.columns:
             data[col] = pd.to_numeric(data[col], errors='coerce')
-        
         st.write(f"NaN values before imputation: {data.isnull().sum().sum()}")
-        
-        # Separate features and target
         X = data.drop('target', axis=1)
         y = data['target']
-
         imputer = SimpleImputer(strategy='mean')
         X = imputer.fit_transform(X)
         st.write(f"NaN values after imputation: {pd.DataFrame(X).isnull().sum().sum()}")
@@ -39,21 +38,16 @@ def load_model():
         y = y.dropna()
         X = X[:len(y)]
         st.write(f"✅ Final dataset: {len(y)} samples")
-        
-        # --- Feature scaling ---
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
-
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         st.write(f"✅ Training set: {X_train.shape[0]} samples")
         st.write(f"✅ Testing set: {X_test.shape[0]} samples")
-        
         model = LogisticRegression(max_iter=5000, random_state=42)
         model.fit(X_train, y_train)
         accuracy = model.score(X_test, y_test)
         st.success(f"✅ Model trained successfully! Accuracy: {accuracy:.2%}")
         st.write(f"📊 Model expects {X_train.shape[1]} features for prediction")
-        
         return model, X_train.shape[1], imputer, scaler
     except Exception as e:
         st.error(f"❌ Error: {str(e)}")
@@ -65,7 +59,6 @@ model, num_features, imputer, scaler = load_model()
 
 if model is not None:
     col1, col2 = st.columns(2)
-
     with col1:
         st.header("📋 Patient Information (Part 1)")
         age = st.slider('Age (years)', 20, 80, 50)
@@ -94,10 +87,8 @@ if model is not None:
                                 thalach, exang, oldpeak, slope, ca, thal]])
         user_input = imputer.transform(user_input)
         user_input = scaler.transform(user_input)
-
         st.write(f"🔍 Your input has {user_input.shape[1]} features")
         st.write(f"📊 Model expects {num_features} features")
-
         if user_input.shape[1] != num_features:
             st.error(f"❌ ERROR: Input has {user_input.shape[1]} features but model expects {num_features}!")
             st.write("This usually means your CSV has different columns than expected.")
