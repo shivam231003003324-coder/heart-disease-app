@@ -32,7 +32,10 @@ def load_model():
         # Separate features and target
         X = data.drop('target', axis=1)
         y = data['target']
-        
+        # After loading data
+# If your target is NOT already binary:
+data['target'] = (data['target'] > 0).astype(int)
+
         # IMPORTANT: Use SimpleImputer to handle NaN values properly
         imputer = SimpleImputer(strategy='mean')
         X = imputer.fit_transform(X)
@@ -149,6 +152,7 @@ if model is not None:
     st.markdown("**Disclaimer:** For educational purposes only. Consult a healthcare professional for proper medical advice.")
 else:
     st.error("❌ Model could not be loaded. Streamlit will retry when you save changes.")
+
 
 
 
