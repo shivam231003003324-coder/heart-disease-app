@@ -23,12 +23,6 @@ def load_model():
         st.write(f"✅ Data loaded: {data.shape[0]} rows, {data.shape[1]} columns")
         st.write(f"📊 Column names: {list(data.columns)}")
         
-        # Convert any text columns to numbers
-        data = data.replace('Male', 1)
-        data = data.replace('Female', 0)
-        data = data.replace('male', 1)
-        data = data.replace('female', 0)
-        
         # Convert all columns to numeric
         for col in data.columns:
             data[col] = pd.to_numeric(data[col], errors='coerce')
@@ -87,35 +81,37 @@ if model is not None:
     col1, col2 = st.columns(2)
 
     # Column 1 - First set of inputs
-    with col1:
-        st.header("📋 Patient Information (Part 1)")
-        age = st.slider('Age (years)', 20, 80, 50)
-        sex = st.selectbox('Sex', ['Female (0)', 'Male (1)'])
-        sex = int(sex.split('(')[1].strip(')'))
-        cp = st.slider('Chest Pain Type (0-3)', 0, 3, 0)
-        trestbps = st.slider('Resting Blood Pressure (mmHg)', 90, 200, 120)
-        cholestoral = st.slider('Cholesterol (mg/dl)', 100, 400, 200)
-        fasting_blood_sugar = st.selectbox('Fasting Blood Sugar > 120?', ['No (0)', 'Yes (1)'])
-        fasting_blood_sugar = int(fasting_blood_sugar.split('(')[1].strip(')'))
-        rest_ecg = st.slider('Resting ECG Results (0-2)', 0, 2, 0)
+   # --- User Inputs (UCI-accurate) ---
+with col1:
+    st.header("📋 Patient Information (Part 1)")
+    age = st.slider('Age (years)', 20, 80, 50)
+    sex = st.selectbox('Sex', ['Female', 'Male'])
+    sex = int(sex.split('(')[1].strip(')'))
+    cp = st.slider('Chest Pain Type (0-3)', 0, 3, 0)
+    trestbps = st.slider('Resting Blood Pressure (mmHg)', 90, 200, 120)
+    chol = st.slider('Cholesterol (mg/dl)', 100, 400, 200)
+    fbs = st.selectbox('Fasting Blood Sugar > 120?', ['No (0)', 'Yes (1)'])
+    fbs = int(fbs.split('(')[1].strip(')'))
+    restecg = st.slider('Resting ECG Results (0-2)', 0, 2, 0)
 
-    # Column 2 - Second set of inputs
-    with col2:
-        st.header("📋 Patient Information (Part 2)")
-        Max_heart_rate = st.slider('Maximum Heart Rate (bpm)', 50, 210, 150)
-        exercise_induced_angina = st.selectbox('Exercise Induced Angina?', ['No (0)', 'Yes (1)'])
-        exercise_induced_angina = int(exercise_induced_angina.split('(')[1].strip(')'))
-        oldpeak = st.slider('ST Depression (0.0-6.0)', 0.0, 6.0, 1.0)
-        slope = st.slider('Slope of Peak Exercise ST (0-2)', 0, 2, 1)
-        vessels_colored_by_flouro = st.slider('Major Vessels Colored (0-3)', 0, 3, 0)
-        thalassemia = st.slider('Thalassemia (0-3)', 0, 3, 0)
+with col2:
+    st.header("📋 Patient Information (Part 2)")
+    thalach = st.slider('Maximum Heart Rate (thalach, bpm)', 50, 210, 150)
+    exang = st.selectbox('Exercise Induced Angina?', ['No (0)', 'Yes (1)'])
+    exang = int(exang.split('(')[1].strip(')'))
+    oldpeak = st.slider('ST Depression (0.0-6.0)', 0.0, 6.0, 1.0)
+    slope = st.slider('Slope of Peak Exercise ST (0-2)', 0, 2, 1)
+    ca = st.slider('Major Vessels Colored (ca, 0-3)', 0, 3, 0)
+    thal = st.slider('Thalassemia (thal, 0-3)', 0, 3, 0)
+
 
     # Predict button
     st.markdown("---")
     if st.button('🔍 Predict Heart Disease Risk', use_container_width=True):
         # Create input array with EXACT number of features the model expects
-        user_input = np.array([[age, sex, cp, trestbps, cholestoral, fasting_blood_sugar, rest_ecg, 
-                               Max_heart_rate, exercise_induced_angina, oldpeak, slope, vessels_colored_by_flouro, thalassemia]])
+       user_input = np.array([[age, sex, cp, trestbps, chol, fbs, restecg, 
+                        thalach, exang, oldpeak, slope, ca, thal]])
+
         
         st.write(f"🔍 Your input has {user_input.shape[1]} features")
         st.write(f"📊 Model expects {num_features} features")
@@ -136,13 +132,18 @@ if model is not None:
             col1, col2 = st.columns(2)
             
             with col1:
-                if prediction == 1:
-                    st.error("⚠️ HEART DISEASE LIKELY DETECTED")
-                    st.write(f"**Risk Level: {probability[1]*100:.2f}%**")
-                    st.write("⚠️ Please consult a medical professional.")
-                else:
-                    st.success("✅ NO HEART DISEASE DETECTED")
-                    st.write(f"**Healthy Confidence: {probability[0]*100:.2f}%**")
+                # Instead of checking prediction == 1, use probability thresholds:
+if probability[1] > 0.7:
+    st.error("⚠️ HEART DISEASE LIKELY DETECTED")
+    st.write(f"**Risk Level: {probability[1]*100:.2f}%**")
+    st.write("⚠️ Please consult a medical professional.")
+elif probability[1] > 0.4:
+    st.warning("Risk Borderline: Consider professional advice.")
+    st.write(f"**Risk Level: {probability[1]*100:.2f}%**")
+else:
+    st.success("✅ NO HEART DISEASE DETECTED")
+    st.write(f"**Healthy Confidence: {probability[0]*100:.2f}%**")
+
             
             with col2:
                 st.write("**Probability Breakdown:**")
@@ -160,6 +161,7 @@ if model is not None:
     st.markdown("**Disclaimer:** For educational purposes only. Consult a healthcare professional for proper medical advice.")
 else:
     st.error("❌ Model could not be loaded. Streamlit will retry when you save changes.")
+
 
 
 
