@@ -4,25 +4,23 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
 
-# Configure the page
 st.set_page_config(page_title="Heart Disease Predictor", page_icon="❤️", layout="wide")
 
-# Add title
 st.title("❤️ Heart Disease Prediction App")
 st.markdown("Enter your health information and click 'Predict' to get results.")
 
-# IMPORTANT: Use @st.cache_resource to train model only ONCE
 @st.cache_resource
 def load_model():
-    """Load and train the model (runs only once)"""
     try:
-        # Load data
         data = pd.read_csv("heart.csv")
-        
         st.write(f"✅ Data loaded: {data.shape[0]} rows, {data.shape[1]} columns")
         st.write(f"📊 Column names: {list(data.columns)}")
         
+        # --- Ensure target is binary ---
+        data['target'] = (data['target'] > 0).astype(int)
+
         # Convert all columns to numeric
         for col in data.columns:
             data[col] = pd.to_numeric(data[col], errors='coerce')
@@ -32,57 +30,42 @@ def load_model():
         # Separate features and target
         X = data.drop('target', axis=1)
         y = data['target']
-        # After loading data
-# If your target is NOT already binary:
-data['target'] = (data['target'] > 0).astype(int)
 
-        # IMPORTANT: Use SimpleImputer to handle NaN values properly
         imputer = SimpleImputer(strategy='mean')
         X = imputer.fit_transform(X)
-        
         st.write(f"NaN values after imputation: {pd.DataFrame(X).isnull().sum().sum()}")
         st.write(f"✅ Dataset ready: {X.shape[0]} rows, {X.shape[1]} features")
         st.write(f"📊 Feature count: {X.shape[1]}")
-        
-        # Remove NaN from y as well
         y = y.dropna()
-        
-        # Make sure X and y have same length
         X = X[:len(y)]
-        
         st.write(f"✅ Final dataset: {len(y)} samples")
         
-        # Split data
+        # --- Feature scaling ---
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
+
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
         st.write(f"✅ Training set: {X_train.shape[0]} samples")
         st.write(f"✅ Testing set: {X_test.shape[0]} samples")
         
-        # Train model
         model = LogisticRegression(max_iter=5000, random_state=42)
         model.fit(X_train, y_train)
-        
-        # Calculate accuracy
         accuracy = model.score(X_test, y_test)
         st.success(f"✅ Model trained successfully! Accuracy: {accuracy:.2%}")
         st.write(f"📊 Model expects {X_train.shape[1]} features for prediction")
         
-        # IMPORTANT: Save feature count for later prediction
-        return model, X_train.shape[1], imputer
-    
+        return model, X_train.shape[1], imputer, scaler
     except Exception as e:
         st.error(f"❌ Error: {str(e)}")
         import traceback
         st.write(traceback.format_exc())
-        return None, None, None
+        return None, None, None, None
 
-# Load the model
-model, num_features, imputer = load_model()
+model, num_features, imputer, scaler = load_model()
+
 if model is not None:
-    # Create two columns
     col1, col2 = st.columns(2)
 
-    # FIRST INPUT COLUMN
     with col1:
         st.header("📋 Patient Information (Part 1)")
         age = st.slider('Age (years)', 20, 80, 50)
@@ -95,7 +78,6 @@ if model is not None:
         fbs = int(fbs.split('(')[1].strip(')'))
         restecg = st.slider('Resting ECG Results (0-2)', 0, 2, 0)
 
-    # SECOND INPUT COLUMN
     with col2:
         st.header("📋 Patient Information (Part 2)")
         thalach = st.slider('Maximum Heart Rate (thalach, bpm)', 50, 210, 150)
@@ -108,9 +90,10 @@ if model is not None:
 
     st.markdown("---")
     if st.button('🔍 Predict Heart Disease Risk', use_container_width=True):
-        # This block should be indented inside the button
         user_input = np.array([[age, sex, cp, trestbps, chol, fbs, restecg, 
                                 thalach, exang, oldpeak, slope, ca, thal]])
+        user_input = imputer.transform(user_input)
+        user_input = scaler.transform(user_input)
 
         st.write(f"🔍 Your input has {user_input.shape[1]} features")
         st.write(f"📊 Model expects {num_features} features")
@@ -121,14 +104,10 @@ if model is not None:
         else:
             prediction = model.predict(user_input)[0]
             probability = model.predict_proba(user_input)[0]
-
             st.markdown("---")
             st.header("🏥 Prediction Result")
-
             col1, col2 = st.columns(2)
-
             with col1:
-                # FIX: This must be properly indented here!
                 if probability[1] > 0.7:
                     st.error("⚠️ HEART DISEASE LIKELY DETECTED")
                     st.write(f"**Risk Level: {probability[1]*100:.2f}%**")
@@ -152,8 +131,3 @@ if model is not None:
     st.markdown("**Disclaimer:** For educational purposes only. Consult a healthcare professional for proper medical advice.")
 else:
     st.error("❌ Model could not be loaded. Streamlit will retry when you save changes.")
-
-
-
-
-
